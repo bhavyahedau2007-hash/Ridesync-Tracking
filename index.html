@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>RideSync — Real-Time Group Ride Tracking</title>
+    <meta name="description" content="Track your riding group in real-time. Share a link, ride together, stay safe.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+    <!-- ===== HOME SCREEN ===== -->
+    <div id="screen-home" class="screen active">
+        <div class="home-map-bg" id="home-map-bg"></div>
+        <div class="home-overlay"></div>
+        <div class="home-content">
+            <div class="home-brand">
+                <svg class="brand-icon" viewBox="0 0 32 32" fill="none">
+                    <path d="M16 2L4 28h8l4-10 4 10h8L16 2z" fill="#1a73e8"/>
+                    <circle cx="16" cy="18" r="3" fill="#fff"/>
+                </svg>
+                <h1>RideSync</h1>
+            </div>
+            <p class="home-tagline">Real-time group tracking for riders.<br>Never lose your pack.</p>
+            <div class="home-actions">
+                <button id="btn-create" class="action-card">
+                    <div class="action-icon create-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+                    </div>
+                    <div class="action-text">
+                        <span class="action-title">Create a Ride</span>
+                        <span class="action-desc">Start a new session & invite riders</span>
+                    </div>
+                    <svg class="action-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+                </button>
+                <button id="btn-join" class="action-card">
+                    <div class="action-icon join-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+                    </div>
+                    <div class="action-text">
+                        <span class="action-title">Join a Ride</span>
+                        <span class="action-desc">Enter a ride code to join your group</span>
+                    </div>
+                    <svg class="action-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+                </button>
+                <button id="btn-scheduled" class="action-card">
+                    <div class="action-icon sched-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><circle cx="12" cy="16" r="2"/></svg>
+                    </div>
+                    <div class="action-text">
+                        <span class="action-title">Scheduled Rides</span>
+                        <span class="action-desc">Plan upcoming group rides</span>
+                    </div>
+                    <svg class="action-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== CREATE RIDE SCREEN ===== -->
+    <div id="screen-create" class="screen">
+        <div class="sheet-backdrop" id="create-backdrop"></div>
+        <div class="sheet sheet-tall">
+            <div class="sheet-handle"></div>
+            <button class="sheet-back" id="create-back">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+            </button>
+            <h2>Create a Ride</h2>
+            <p class="sheet-subtitle">Set up your session and share the link with your group.</p>
+            <div class="sheet-scroll">
+                <div class="form-field">
+                    <label for="create-name">Your Name</label>
+                    <input type="text" id="create-name" placeholder="e.g. Bhavya" maxlength="24" autocomplete="off" spellcheck="false">
+                </div>
+                <div class="form-field">
+                    <label for="create-dest">Destination / Hangout Spot</label>
+                    <div class="dest-input-wrap">
+                        <svg class="dest-pin" viewBox="0 0 24 24" fill="none" stroke="#d93025" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                        <input type="text" id="create-dest" placeholder="Search for a place…" autocomplete="off" spellcheck="false">
+                    </div>
+                    <div id="dest-suggestions" class="dest-suggestions hidden"></div>
+                    <p class="field-hint">Or tap on the map to set destination</p>
+                </div>
+                <div class="form-field">
+                    <label>Ride Timing</label>
+                    <div class="timing-toggle">
+                        <button class="timing-btn active" data-timing="now" id="timing-now">Start Now</button>
+                        <button class="timing-btn" data-timing="later" id="timing-later">Schedule</button>
+                    </div>
+                </div>
+                <div id="schedule-fields" class="schedule-fields hidden">
+                    <div class="form-row">
+                        <div class="form-field">
+                            <label for="sched-date">Date</label>
+                            <input type="date" id="sched-date">
+                        </div>
+                        <div class="form-field">
+                            <label for="sched-time">Time</label>
+                            <input type="time" id="sched-time">
+                        </div>
+                    </div>
+                </div>
+                <button id="btn-create-go" class="btn-primary" disabled>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+                    <span id="create-btn-text">Create & Get Link</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== JOIN RIDE SCREEN ===== -->
+    <div id="screen-join" class="screen">
+        <div class="sheet-backdrop" id="join-backdrop"></div>
+        <div class="sheet">
+            <div class="sheet-handle"></div>
+            <button class="sheet-back" id="join-back">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+            </button>
+            <h2>Join a Ride</h2>
+            <p class="sheet-subtitle">Enter the ride code shared by your group leader.</p>
+            <div class="form-field">
+                <label for="join-name">Your Name</label>
+                <input type="text" id="join-name" placeholder="e.g. Arjun" maxlength="24" autocomplete="off" spellcheck="false">
+            </div>
+            <div class="form-field">
+                <label for="join-code">Ride Code</label>
+                <input type="text" id="join-code" placeholder="e.g. SYNC-A3F7" maxlength="9" autocomplete="off" spellcheck="false" class="input-code">
+            </div>
+            <button id="btn-join-go" class="btn-primary" disabled>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+                Join Ride
+            </button>
+        </div>
+    </div>
+
+    <!-- ===== SCHEDULED RIDES SCREEN ===== -->
+    <div id="screen-scheduled" class="screen">
+        <div class="sheet-backdrop" id="sched-backdrop"></div>
+        <div class="sheet sheet-tall">
+            <div class="sheet-handle"></div>
+            <button class="sheet-back" id="sched-back">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+            </button>
+            <h2>Scheduled Rides</h2>
+            <p class="sheet-subtitle">Upcoming rides you've planned.</p>
+            <div id="sched-list" class="sched-list">
+                <div class="empty-state">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#9aa0a6" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                    <p>No scheduled rides yet.<br>Create one to get started!</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== SHARE LINK SCREEN ===== -->
+    <div id="screen-share" class="screen">
+        <div class="sheet-backdrop" id="share-backdrop"></div>
+        <div class="sheet sheet-share">
+            <div class="sheet-handle"></div>
+            <div class="share-icon-wrap">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#1a73e8" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><polyline points="8 12 12 8 16 12"/><line x1="12" y1="8" x2="12" y2="16"/></svg>
+            </div>
+            <h2>Ride Created!</h2>
+            <p class="sheet-subtitle">Share this code or link with your riders.</p>
+            <div id="share-dest-info" class="share-dest-info hidden">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#d93025" stroke-width="2" width="16" height="16"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                <span id="share-dest-name"></span>
+            </div>
+            <div class="share-code-box">
+                <span id="share-code-display">SYNC-XXXX</span>
+            </div>
+            <div class="share-link-row">
+                <input type="text" id="share-link" readonly>
+                <button id="btn-copy-link" class="btn-copy" title="Copy link">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                </button>
+            </div>
+            <button id="btn-share-start" class="btn-primary">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                Start Tracking
+            </button>
+            <p class="share-note">Riders can join anytime while the session is active.</p>
+        </div>
+    </div>
+
+    <!-- ===== LIVE MAP SCREEN ===== -->
+    <div id="screen-map" class="screen">
+        <div id="map" class="map-full"></div>
+
+        <!-- Top Bar -->
+        <div class="map-topbar">
+            <div class="topbar-left">
+                <div class="topbar-dot live"></div>
+                <span class="topbar-label">LIVE</span>
+                <span class="topbar-code" id="topbar-code">SYNC-XXXX</span>
+            </div>
+            <div class="topbar-center" id="topbar-dest-wrap" style="display:none;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#d93025" stroke-width="2" width="14" height="14"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                <span id="topbar-dest" class="topbar-dest"></span>
+                <span id="topbar-eta" class="topbar-eta"></span>
+            </div>
+            <div class="topbar-right">
+                <span id="topbar-riders" class="topbar-riders">0 riders</span>
+            </div>
+        </div>
+
+        <!-- Live Stats Bar -->
+        <div class="live-stats" id="live-stats">
+            <div class="live-stat">
+                <span class="live-stat-val" id="ls-dist">0.0</span>
+                <span class="live-stat-unit">km</span>
+            </div>
+            <div class="live-stat-sep"></div>
+            <div class="live-stat">
+                <span class="live-stat-val" id="ls-speed">0</span>
+                <span class="live-stat-unit">km/h</span>
+            </div>
+            <div class="live-stat-sep"></div>
+            <div class="live-stat">
+                <span class="live-stat-val" id="ls-time">00:00</span>
+                <span class="live-stat-unit">time</span>
+            </div>
+        </div>
+
+        <!-- Rider Drawer -->
+        <div class="rider-drawer" id="rider-drawer">
+            <div class="drawer-handle" id="drawer-handle"></div>
+            <div class="drawer-header">
+                <h3>Riders</h3>
+                <div class="drawer-stats">
+                    <span class="drawer-stat" id="stat-spread">Spread: 0m</span>
+                </div>
+            </div>
+            <div class="drawer-list" id="drawer-list"></div>
+        </div>
+
+        <!-- FABs -->
+        <div class="map-fab-group">
+            <button id="fab-center" class="map-fab" title="Center on group">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg>
+            </button>
+            <button id="fab-break" class="map-fab fab-break" title="Request a break">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 8h1a4 4 0 010 8h-1"/><path d="M3 8h14v9a4 4 0 01-4 4H7a4 4 0 01-4-4V8z"/><line x1="6" y1="2" x2="6" y2="4"/><line x1="10" y1="2" x2="10" y2="4"/><line x1="14" y1="2" x2="14" y2="4"/></svg>
+            </button>
+            <button id="fab-end" class="map-fab fab-end" title="End ride">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+            </button>
+        </div>
+
+        <!-- Toasts -->
+        <div id="toasts" class="toast-container"></div>
+    </div>
+
+    <!-- ===== RIDE SUMMARY / STATS SCREEN ===== -->
+    <div id="screen-summary" class="screen">
+        <div class="summary-bg"></div>
+        <div class="summary-wrap">
+            <div class="summary-card" id="summary-card">
+                <div class="summary-brand">
+                    <svg viewBox="0 0 32 32" fill="none" width="20" height="20"><path d="M16 2L4 28h8l4-10 4 10h8L16 2z" fill="#1a73e8"/><circle cx="16" cy="18" r="3" fill="#fff"/></svg>
+                    <span>RideSync</span>
+                </div>
+                <div class="summary-map" id="summary-map"></div>
+                <div class="summary-stats">
+                    <div class="summary-stat main-stat">
+                        <span class="ss-value" id="sum-dist">0.0</span>
+                        <span class="ss-label">km covered</span>
+                    </div>
+                    <div class="summary-stat-row">
+                        <div class="summary-stat">
+                            <span class="ss-value" id="sum-speed">0</span>
+                            <span class="ss-label">avg km/h</span>
+                        </div>
+                        <div class="summary-stat">
+                            <span class="ss-value" id="sum-time">00:00</span>
+                            <span class="ss-label">duration</span>
+                        </div>
+                        <div class="summary-stat">
+                            <span class="ss-value" id="sum-riders">0</span>
+                            <span class="ss-label">riders</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="summary-dest-row" id="sum-dest-row" style="display:none;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#d93025" stroke-width="2" width="14" height="14"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                    <span id="sum-dest-name"></span>
+                </div>
+                <div class="summary-footer">
+                    <span class="summary-date" id="sum-date"></span>
+                    <span class="summary-tag">#RideSync</span>
+                </div>
+            </div>
+            <div class="summary-actions">
+                <button id="btn-share-stats" class="btn-primary">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+                    Share Ride Stats
+                </button>
+                <button id="btn-download-stats" class="btn-secondary">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    Save as Image
+                </button>
+                <button id="btn-back-home" class="btn-text">Done</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
